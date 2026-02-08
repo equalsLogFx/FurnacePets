@@ -1,98 +1,156 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Haptics from 'expo-haptics';
+import React, { useEffect, useState } from 'react';
+import { ImageBackground, SafeAreaView, StyleSheet, View } from 'react-native';
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import { ConvertButton } from '@/components/convert-button';
+import { GamePanel } from '@/components/game-panel';
+import { GameStats } from '@/components/game-stats';
+import { Pet } from '@/components/pet';
+import { usePedometer } from '@/hooks/use-pedometer';
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">FurnacePets is alive 🔥🐾</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+  const { steps } = usePedometer();
+  const [currency, setCurrency] = useState(0);
+  const [totalCurrency, setTotalCurrency] = useState(0);
+  const [totalStepsConverted, setTotalStepsConverted] = useState(0);
+  const [lastConversionTime, setLastConversionTime] = useState<Date>();
+  const [petMood, setPetMood] = useState<'happy' | 'neutral' | 'playful'>('neutral');
+  const [petLevel, setPetLevel] = useState(1);
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+  // Load saved data on mount
+  useEffect(() => {
+    const loadSavedData = async () => {
+      try {
+        const savedData = await AsyncStorage.getItem('furnacepets_game');
+        if (savedData) {
+          const parsed = JSON.parse(savedData);
+          setTotalCurrency(parsed.totalCurrency || 0);
+          setTotalStepsConverted(parsed.totalStepsConverted || 0);
+          setLastConversionTime(parsed.lastConversionTime ? new Date(parsed.lastConversionTime) : undefined);
+          setPetLevel(parsed.petLevel || 1);
+          setCurrency(parsed.currency || 0);
+        }
+      } catch (e) {
+        console.error('Failed to load saved data', e);
+      }
+    };
+    loadSavedData();
+  }, []);
+
+  // Save data whenever it changes
+  useEffect(() => {
+    const saveData = async () => {
+      try {
+        const dataToSave = {
+          totalCurrency,
+          totalStepsConverted,
+          lastConversionTime: lastConversionTime?.toISOString(),
+          petLevel,
+          currency,
+        };
+        await AsyncStorage.setItem('furnacepets_game', JSON.stringify(dataToSave));
+      } catch (e) {
+        console.error('Failed to save data', e);
+      }
+    };
+    saveData();
+  }, [totalCurrency, totalStepsConverted, lastConversionTime, petLevel, currency]);
+
+  const handleConvert = (convertedAmount: number) => {
+    setCurrency(0); // Reset daily currency display
+    setTotalCurrency(prev => prev + convertedAmount);
+    setTotalStepsConverted(prev => prev + steps);
+    setLastConversionTime(new Date());
+
+    // Pet reacts to conversion
+    setPetMood('happy');
+    setTimeout(() => setPetMood('neutral'), 2000);
+
+    // Trigger haptic feedback
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+    // Level up every 50000 steps converted
+    if ((totalStepsConverted + steps) % 50000 < steps) {
+      setPetLevel(prev => prev + 1);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+  };
+
+  const handlePetTap = () => {
+    setPetMood('playful');
+    setTimeout(() => setPetMood('neutral'), 1500);
+  };
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <ImageBackground
+        source={require('@/assets/images/partial-react-logo.png')}
+        style={styles.backgroundImage}
+        imageStyle={styles.backgroundImageStyle}
+      >
+        <View style={styles.container}>
+          {/* Stats at top */}
+          <GameStats steps={steps} currency={totalCurrency} />
+
+          {/* Main game area */}
+          <View style={styles.gameArea}>
+            {/* Convert button in the middle-top area */}
+            <ConvertButton
+              steps={steps}
+              onConvert={handleConvert}
+              isDisabled={steps === 0}
+            />
+
+            {/* Pet display */}
+            <View style={styles.petContainer}>
+              <Pet onTap={handlePetTap} mood={petMood} />
+            </View>
+          </View>
+
+          {/* Bottom info panel */}
+          <GamePanel
+            totalCurrency={totalCurrency}
+            totalStepsConverted={totalStepsConverted}
+            lastConversionTime={lastConversionTime}
+            petName="FurnacePet"
+            petLevel={petLevel}
+          />
+        </View>
+      </ImageBackground>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
+  backgroundImage: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+  },
+  backgroundImageStyle: {
+    opacity: 0.08,
+    resizeMode: 'cover',
+  },
+  container: {
+    flex: 1,
+    flexDirection: 'column',
+    justifyContent: 'space-between',
+  },
+  gameArea: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
-    gap: 8,
+    gap: 20,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  petContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: '100%',
   },
 });
