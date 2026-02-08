@@ -87,7 +87,7 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <ImageBackground
-        source={require('@/assets/images/partial-react-logo.png')}
+        source={require('@/assets/images/Background.jpg')}
         style={styles.backgroundImage}
         imageStyle={styles.backgroundImageStyle}
       >
@@ -135,8 +135,9 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   backgroundImageStyle: {
-    opacity: 0.08,
+    opacity: 1,
     resizeMode: 'cover',
+    top: -40,
   },
   container: {
     flex: 1,

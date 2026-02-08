@@ -1,5 +1,6 @@
+import { Audio } from 'expo-av';
 import * as Haptics from 'expo-haptics';
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Image, ImageSourcePropType, Pressable, StyleSheet, Text, View } from 'react-native';
 
 interface PetProps {
@@ -11,8 +12,41 @@ interface PetProps {
 export const Pet = ({ onTap, mood = 'neutral', image }: PetProps) => {
   const [scale] = useState(new Animated.Value(1));
   const [bounce] = useState(new Animated.Value(0));
+  const soundRef = useRef<Audio.Sound | null>(null);
+
+  // Load sound on component mount
+  useEffect(() => {
+    const loadSound = async () => {
+      try {
+        const { sound } = await Audio.Sound.createAsync(
+          require('@/assets/audio/HappyFurnaceBarks.wav')
+        );
+        soundRef.current = sound;
+      } catch (error) {
+        console.error('Failed to load sound', error);
+      }
+    };
+
+    loadSound();
+
+    // Cleanup on unmount
+    return () => {
+      if (soundRef.current) {
+        soundRef.current.unloadAsync();
+      }
+    };
+  }, []);
 
   const handleTap = async () => {
+    // Play sound
+    if (soundRef.current) {
+      try {
+        await soundRef.current.replayAsync();
+      } catch (error) {
+        console.error('Failed to play sound', error);
+      }
+    }
+
     // Haptic feedback
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
@@ -85,7 +119,6 @@ export const Pet = ({ onTap, mood = 'neutral', image }: PetProps) => {
           )}
         </Animated.View>
       </Pressable>
-      <Text style={styles.petLabel}>Tap to interact!</Text>
     </View>
   );
 };
@@ -93,28 +126,27 @@ export const Pet = ({ onTap, mood = 'neutral', image }: PetProps) => {
 const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
-    gap: 12,
+    gap: 0,
+    marginRight: 40,
+    marginTop: 60,
   },
   petButton: {
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    backgroundColor: 'rgba(255, 180, 0, 0.1)',
+    backgroundColor: 'transparent',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 3,
-    borderColor: 'rgba(255, 180, 0, 0.3)',
+    borderWidth: 0,
+    borderColor: 'transparent',
   },
   petButtonPressed: {
-    backgroundColor: 'rgba(255, 180, 0, 0.2)',
+    backgroundColor: 'transparent',
   },
   petContent: {
     alignItems: 'center',
     gap: 4,
   },
   petImage: {
-    width: 120,
-    height: 120,
+    width: 200,
+    height: 200,
     resizeMode: 'contain',
   },
   petEmoji: {
@@ -122,10 +154,5 @@ const styles = StyleSheet.create({
   },
   petMood: {
     fontSize: 40,
-  },
-  petLabel: {
-    fontSize: 12,
-    color: '#888',
-    fontStyle: 'italic',
   },
 });
