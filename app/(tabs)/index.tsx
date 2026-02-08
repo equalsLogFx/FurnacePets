@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 import React, { useEffect, useState } from 'react';
-import { ImageBackground, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { Alert, ImageBackground, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 
 import { ConvertButton } from '@/components/convert-button';
 import { GamePanel } from '@/components/game-panel';
@@ -26,6 +26,11 @@ export default function HomeScreen() {
   const [shopVisible, setShopVisible] = useState(false);
   const [inventoryVisible, setInventoryVisible] = useState(false);
   const [inventoryItems, setInventoryItems] = useState<Array<{ id: string; name: string }>>([]);
+  const [weeklySteps, setWeeklySteps] = useState<number[]>([0, 0, 0, 0, 0, 0, 0]);
+  // Dev/manual step control: stop automatic pedometer accumulation
+  const [useManualSteps, setUseManualSteps] = useState(true);
+  const [manualSteps, setManualSteps] = useState(0);
+  const [daySliderIndex, setDaySliderIndex] = useState(0);
 
   // Load saved data on mount
   useEffect(() => {
@@ -41,6 +46,7 @@ export default function HomeScreen() {
           setCurrency(parsed.currency || 0);
           setLastConversionStepCount(parsed.lastConversionStepCount || 0);
           setInventoryItems(parsed.inventory || []);
+          setWeeklySteps(parsed.weeklySteps || [0, 0, 0, 0, 0, 0, 0]);
         }
       } catch (e) {
         console.error('Failed to load saved data', e);
@@ -61,6 +67,7 @@ export default function HomeScreen() {
           currency,
           lastConversionStepCount,
           inventory: inventoryItems,
+          weeklySteps,
         };
         await AsyncStorage.setItem('furnacepets_game', JSON.stringify(dataToSave));
       } catch (e) {
@@ -68,14 +75,15 @@ export default function HomeScreen() {
       }
     };
     saveData();
-  }, [totalCurrency, totalStepsConverted, lastConversionTime, petLevel, currency, lastConversionStepCount]);
+  }, [totalCurrency, totalStepsConverted, lastConversionTime, petLevel, currency, lastConversionStepCount, weeklySteps]);
 
   const handleConvert = (convertedAmount: number) => {
     setCurrency(0); // Reset daily currency display
     setTotalCurrency(prev => prev + convertedAmount);
-    setTotalStepsConverted(prev => prev + steps);
+    const currentSteps = useManualSteps ? manualSteps : steps;
+    setTotalStepsConverted(prev => prev + currentSteps);
     setLastConversionTime(new Date());
-    setLastConversionStepCount(steps); // Reset convertible steps counter
+    setLastConversionStepCount(currentSteps); // Reset convertible steps counter
 
     // Pet reacts to conversion
     setPetMood('happy');
@@ -96,8 +104,11 @@ export default function HomeScreen() {
     setTimeout(() => setPetMood('neutral'), 1500);
   };
 
+  // Displayed steps follow manual override when dev control enabled
+  const displayedSteps = useManualSteps ? manualSteps : steps;
+
   // Calculate convertible steps (steps since last conversion)
-  const convertibleSteps = Math.max(0, steps - lastConversionStepCount);
+  const convertibleSteps = Math.max(0, displayedSteps - lastConversionStepCount);
 
   // Shop items available for purchase
   const shopItems = [
@@ -130,6 +141,71 @@ export default function HomeScreen() {
     // equip behavior placeholder (no-op for now)
   };
 
+  // Dev helpers
+  const increaseManualSteps = (delta: number) => {
+    setManualSteps(prev => Math.max(0, prev + delta));
+  };
+
+  const resetCurrency = () => {
+    setTotalCurrency(0);
+    setCurrency(0);
+  };
+
+  const clearInventory = () => {
+    setInventoryItems([]);
+  };
+
+  const handleDevInput = () => {
+    const newWeeklySteps: number[] = [];
+    let currentIndex = 0;
+    const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+    const promptNextInput = () => {
+      if (currentIndex < 7) {
+        Alert.prompt(
+          `${dayNames[currentIndex]} Steps`,
+          'Enter number of steps',
+          [
+            {
+              text: 'Cancel',
+              onPress: () => {}, // stops prompting
+              style: 'cancel',
+            },
+            {
+              text: 'OK',
+              onPress: (value: string | undefined) => {
+                const num = parseInt(value || '0', 10) || 0;
+                newWeeklySteps.push(num);
+                currentIndex++;
+                promptNextInput();
+              },
+            },
+          ],
+          'plain-text',
+          '',
+          'number-pad'
+        );
+      } else {
+        setWeeklySteps(newWeeklySteps);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+    };
+
+    promptNextInput();
+  };
+
+  const handleDaySlideLeft = () => {
+    if (daySliderIndex > 0) {
+      setDaySliderIndex(daySliderIndex - 1);
+    }
+  };
+
+  const handleDaySlideRight = () => {
+    if (daySliderIndex < 4) { // 7 days total - 3 visible = max 4
+      setDaySliderIndex(daySliderIndex + 1);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <ImageBackground
@@ -144,6 +220,15 @@ export default function HomeScreen() {
               {/* Steps box */}
               <View style={styles.statBox}>
                 <GameStats steps={convertibleSteps} currency={0} renderStepsOnly={true} />
+
+                <View style={styles.devRow}>
+                  <Pressable onPress={() => increaseManualSteps(500)} style={({ pressed }) => [styles.devBtn, pressed && styles.devBtnPressed]}>
+                    <Text style={styles.devBtnText}>+500</Text>
+                  </Pressable>
+                  <Pressable onPress={() => increaseManualSteps(-500)} style={({ pressed }) => [styles.devBtn, pressed && styles.devBtnPressed]}>
+                    <Text style={styles.devBtnText}>-500</Text>
+                  </Pressable>
+                </View>
               </View>
 
               {/* Convert button between stats */}
@@ -158,6 +243,11 @@ export default function HomeScreen() {
               {/* Currency box */}
               <View style={[styles.statBox, styles.currencyBox]}> 
                 <GameStats steps={0} currency={totalCurrency} renderCurrencyOnly={true} />
+                <View style={styles.devRow}>
+                  <Pressable onPress={resetCurrency} style={({ pressed }) => [styles.devBtn, pressed && styles.devBtnPressed]}>
+                    <Text style={styles.devBtnText}>Reset</Text>
+                  </Pressable>
+                </View>
               </View>
 
               <View style={styles.rightIcons} pointerEvents="box-none">
@@ -170,7 +260,7 @@ export default function HomeScreen() {
               </View>
 
               <ShopModal visible={shopVisible} items={shopItems} currency={totalCurrency} onClose={() => setShopVisible(false)} onBuy={handleBuy} />
-              <InventoryModal visible={inventoryVisible} items={inventoryItems} onClose={() => setInventoryVisible(false)} onEquip={handleEquip} />
+              <InventoryModal visible={inventoryVisible} items={inventoryItems} onClose={() => setInventoryVisible(false)} onEquip={handleEquip} onClear={clearInventory} />
             </View>
           </View>
 
@@ -178,21 +268,33 @@ export default function HomeScreen() {
           <View style={styles.gameArea}>
             {/* Pet display */}
             <View style={styles.petContainer}>
-              <Pet image={dogImage} onTap={handlePetTap} mood={petMood} />
-            </View>
+                {/* choose pet image based on weekly steps total */}
+                {(() => {
+                  const totalWeek = weeklySteps.reduce((s, v) => s + (v || 0), 0);
+                  let petSrc = require('@/assets/images/Dog.png');
+                  if (totalWeek < 45000) petSrc = require('@/assets/images/DogSad.png');
+                  else if (totalWeek > 75000) petSrc = require('@/assets/images/DogHappy.png');
+                  return <Pet image={petSrc} onTap={handlePetTap} mood={petMood} />;
+                })()}
+              </View>
           </View>
 
           {/* Bottom info panel */}
           <View style={styles.panelContainer}>
-            <GamePanel
+              <GamePanel
               totalCurrency={totalCurrency}
               totalStepsConverted={totalStepsConverted}
-              totalStepsToday={steps}
+              totalStepsToday={displayedSteps}
               lastConversionTime={lastConversionTime}
-              petName="FurnacePet"
+              petName="Furnace"
               petLevel={petLevel}
               petMood={petMood}
               isExpanded={panelExpanded}
+              weeklySteps={weeklySteps}
+              onDevInput={handleDevInput}
+              daySliderIndex={daySliderIndex}
+              onDaySlideLeft={handleDaySlideLeft}
+              onDaySlideRight={handleDaySlideRight}
               onSwipe={(direction) => {
                 if (direction === 'up') {
                   setPanelExpanded(true);
@@ -302,5 +404,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 10,
+  },
+  iconSquarePressed: {
+    backgroundColor: '#6f5436',
+  },
+  currencyBox: {
+    marginRight: 96,
   },
 });

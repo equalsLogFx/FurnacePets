@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { PanResponder, StyleSheet, Text, View } from 'react-native';
+import { PanResponder, Pressable, StyleSheet, Text, View } from 'react-native';
 
 interface GamePanelProps {
   totalCurrency: number;
@@ -11,6 +11,11 @@ interface GamePanelProps {
   petMood?: 'happy' | 'neutral' | 'playful';
   isExpanded?: boolean;
   onSwipe?: (direction: 'up' | 'down') => void;
+  weeklySteps?: number[];
+  onDevInput?: () => void;
+  daySliderIndex?: number;
+  onDaySlideLeft?: () => void;
+  onDaySlideRight?: () => void;
 }
 
 export const GamePanel = ({
@@ -23,8 +28,14 @@ export const GamePanel = ({
   petMood = 'neutral',
   isExpanded = false,
   onSwipe,
+  weeklySteps = [0, 0, 0, 0, 0, 0, 0],
+  onDevInput,
+  daySliderIndex = 0,
+  onDaySlideLeft,
+  onDaySlideRight,
 }: GamePanelProps) => {
   const startY = useRef(0);
+  const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
   const panResponder = useRef(
     PanResponder.create({
@@ -85,6 +96,48 @@ export const GamePanel = ({
               <Text style={styles.timeLabel}>Last Converted: {lastConversionTime.toLocaleTimeString()}</Text>
             </View>
           )}
+
+          {/* Weekly Steps Section */}
+          <View style={styles.weeklySection}>
+            <View style={styles.weeklyHeader}>
+              <Text style={styles.weeklyTitle}>Weekly Steps</Text>
+              <Pressable onPress={onDevInput} style={styles.devInputButton}>
+                <Text style={styles.devInputButtonText}>Dev Input</Text>
+              </Pressable>
+            </View>
+            <View style={styles.sliderContainer}>
+              <Pressable 
+                onPress={onDaySlideLeft} 
+                disabled={daySliderIndex === 0}
+                style={[styles.arrowButton, daySliderIndex === 0 && styles.arrowButtonDisabled]}
+              >
+                <Text style={[styles.arrowText, daySliderIndex === 0 && styles.arrowTextDisabled]}>◀</Text>
+              </Pressable>
+              
+              <View style={styles.daysDisplay}>
+                {[0, 1, 2].map((offset) => {
+                  const idx = daySliderIndex + offset;
+                  if (idx < 7) {
+                    return (
+                      <View key={idx} style={styles.weekSquare}>
+                        <Text style={styles.weekLabel}>{dayNames[idx]}</Text>
+                        <Text style={styles.weekValue}>{weeklySteps[idx].toLocaleString()}</Text>
+                      </View>
+                    );
+                  }
+                  return null;
+                })}
+              </View>
+              
+              <Pressable 
+                onPress={onDaySlideRight}
+                disabled={daySliderIndex >= 4}
+                style={[styles.arrowButton, daySliderIndex >= 4 && styles.arrowButtonDisabled]}
+              >
+                <Text style={[styles.arrowText, daySliderIndex >= 4 && styles.arrowTextDisabled]}>▶</Text>
+              </Pressable>
+            </View>
+          </View>
         </View>
       )}
     </View>
@@ -189,5 +242,89 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#999',
     fontStyle: 'italic',
+  },
+  weeklySection: {
+    marginTop: 16,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0, 0, 0, 0.1)',
+  },
+  weeklyHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  weeklyTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1a1a1a',
+  },
+  devInputButton: {
+    backgroundColor: '#8B6F47',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  devInputButtonText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  weeklyScroll: {
+    flexDirection: 'row',
+  },
+  sliderContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  arrowButton: {
+    width: 36,
+    height: 36,
+    backgroundColor: '#8B6F47',
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  arrowButtonDisabled: {
+    backgroundColor: '#ccc',
+    opacity: 0.5,
+  },
+  arrowText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  arrowTextDisabled: {
+    color: '#999',
+  },
+  daysDisplay: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  weekSquare: {
+    width: 56,
+    height: 56,
+    backgroundColor: '#8B6F47',
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 8,
+    paddingHorizontal: 4,
+  },
+  weekLabel: {
+    fontSize: 10,
+    color: '#F5DEB3',
+    fontWeight: '600',
+  },
+  weekValue: {
+    fontSize: 12,
+    color: '#FFF8DC',
+    fontWeight: '700',
+    marginTop: 2,
   },
 });

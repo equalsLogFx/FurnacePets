@@ -21,6 +21,7 @@ interface InventoryModalProps {
   items: InvItem[];
   onClose: () => void;
   onEquip: (item: InvItem) => void;
+  onClear?: () => void;
 }
 
 export const InventoryModal = ({ visible, items, onClose, onEquip }: InventoryModalProps) => {
@@ -61,9 +62,16 @@ export const InventoryModal = ({ visible, items, onClose, onEquip }: InventoryMo
           <Animated.View style={[styles.panel, { opacity }]}> 
             <View style={styles.headerRow}>
               <Text style={styles.title}>Inventory</Text>
-              <Pressable onPress={onClose} style={styles.closeBtn}>
-                <Text style={styles.closeText}>Close</Text>
-              </Pressable>
+              <View style={styles.headerActions}>
+                {typeof onClear === 'function' && (
+                  <Pressable onPress={onClear} style={styles.clearBtn}>
+                    <Text style={styles.clearText}>Clear</Text>
+                  </Pressable>
+                )}
+                <Pressable onPress={onClose} style={styles.closeBtn}>
+                  <Text style={styles.closeText}>Close</Text>
+                </Pressable>
+              </View>
             </View>
 
             <FlatList
@@ -101,6 +109,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
   },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  clearBtn: { padding: 8, marginRight: 6 },
+  clearText: { color: '#d9534f', fontWeight: '600' },
   title: { fontSize: 18, fontWeight: '700' },
   closeBtn: { padding: 8 },
   closeText: { color: '#007aff' },
