@@ -15,6 +15,8 @@ export default function TabLayout() {
         tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
         headerShown: false,
         tabBarButton: HapticTab,
+        // hide bottom tab bar (removes Home / Explore buttons)
+        tabBarStyle: { display: 'none' },
       }}>
       <Tabs.Screen
         name="index"
