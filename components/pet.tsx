@@ -13,15 +13,28 @@ export const Pet = ({ onTap, mood = 'neutral', image }: PetProps) => {
   const [scale] = useState(new Animated.Value(1));
   const [bounce] = useState(new Animated.Value(0));
   const soundRef = useRef<Audio.Sound | null>(null);
+  const durationRef = useRef<number | null>(null);
+  const playbackListenerRef = useRef<((status: any) => void) | null>(null);
+
+  // predetermined start points (milliseconds)
+  const startPoints = [0, 2500, 4700];
 
   // Load sound on component mount
   useEffect(() => {
     const loadSound = async () => {
       try {
-        const { sound } = await Audio.Sound.createAsync(
+        const { sound, status } = await Audio.Sound.createAsync(
           require('@/assets/audio/HappyFurnaceBarks.wav')
         );
         soundRef.current = sound;
+        if (status && status.isLoaded && status.durationMillis) {
+          durationRef.current = status.durationMillis;
+        } else {
+          const st = await sound.getStatusAsync();
+          if (st && st.isLoaded && st.durationMillis) {
+            durationRef.current = st.durationMillis;
+          }
+        }
       } catch (error) {
         console.error('Failed to load sound', error);
       }
@@ -38,10 +51,44 @@ export const Pet = ({ onTap, mood = 'neutral', image }: PetProps) => {
   }, []);
 
   const handleTap = async () => {
-    // Play sound
+    // Play a random segment from startPoints until the next point (or end)
     if (soundRef.current) {
       try {
-        await soundRef.current.replayAsync();
+        const sound = soundRef.current;
+
+        // pick random start index
+        const idx = Math.floor(Math.random() * startPoints.length);
+        const startMs = startPoints[idx];
+        let endMs: number | null = null;
+        if (idx < startPoints.length - 1) endMs = startPoints[idx + 1];
+        else endMs = durationRef.current;
+
+        // clamp start
+        if (durationRef.current && startMs >= durationRef.current) {
+          await sound.setPositionAsync(0);
+        } else {
+          await sound.setPositionAsync(startMs);
+        }
+
+        // remove previous listener
+        if (playbackListenerRef.current) {
+          sound.setOnPlaybackStatusUpdate(null);
+          playbackListenerRef.current = null;
+        }
+
+        // set listener to stop at endMs (if provided)
+        playbackListenerRef.current = (status: any) => {
+          if (!status.isLoaded) return;
+          const pos = status.positionMillis ?? 0;
+          if (endMs && pos >= endMs) {
+            sound.pauseAsync();
+            sound.setOnPlaybackStatusUpdate(null);
+            playbackListenerRef.current = null;
+          }
+        };
+        sound.setOnPlaybackStatusUpdate(playbackListenerRef.current);
+
+        await sound.playAsync();
       } catch (error) {
         console.error('Failed to play sound', error);
       }

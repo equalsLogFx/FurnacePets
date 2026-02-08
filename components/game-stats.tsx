@@ -4,9 +4,38 @@ import { StyleSheet, Text, View } from 'react-native';
 interface GameStatsProps {
   steps: number;
   currency: number;
+  renderStepsOnly?: boolean;
+  renderCurrencyOnly?: boolean;
 }
 
-export const GameStats = ({ steps, currency }: GameStatsProps) => {
+export const GameStats = ({ 
+  steps, 
+  currency, 
+  renderStepsOnly = false,
+  renderCurrencyOnly = false 
+}: GameStatsProps) => {
+  // If specific view requested
+  if (renderStepsOnly) {
+    return (
+      <View style={styles.singleStatBox}>
+        <Text style={styles.label}>Steps</Text>
+        <Text style={styles.value}>{steps.toLocaleString()}</Text>
+        <Text style={styles.unit}>👣</Text>
+      </View>
+    );
+  }
+  
+  if (renderCurrencyOnly) {
+    return (
+      <View style={styles.singleStatBox}>
+        <Text style={styles.label}>Currency</Text>
+        <Text style={styles.value}>{currency.toLocaleString()}</Text>
+        <Text style={styles.unit}>🔥</Text>
+      </View>
+    );
+  }
+
+  // Default: render both
   return (
     <View style={styles.container}>
       {/* Left - Steps */}
@@ -33,36 +62,39 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 8,
-    backgroundColor: 'rgba(0, 0, 0, 0.03)',
-    gap: 12,
+    backgroundColor: 'transparent',
+    gap: 8,
+    alignItems: 'flex-start',
   },
   statBox: {
     flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderRadius: 12,
+    backgroundColor: '#8B6F47',
+    borderRadius: 6,
     padding: 12,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.1)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+  },
+  singleStatBox: {
+    backgroundColor: '#8B6F47',
+    borderRadius: 6,
+    padding: 12,
+    alignItems: 'center',
+    width: '100%',
   },
   label: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: 11,
+    color: '#F5DEB3',
     fontWeight: '600',
     marginBottom: 4,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
   value: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '700',
-    color: '#1a1a1a',
+    color: '#FFF8DC',
     marginBottom: 4,
   },
   unit: {
-    fontSize: 16,
+    fontSize: 18,
   },
 });

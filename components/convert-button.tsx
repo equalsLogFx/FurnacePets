@@ -1,6 +1,6 @@
 import * as Haptics from 'expo-haptics';
 import React, { useState } from 'react';
-import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Pressable, StyleSheet, Text } from 'react-native';
 
 interface ConvertButtonProps {
   steps: number;
@@ -10,7 +10,7 @@ interface ConvertButtonProps {
 
 export const ConvertButton = ({ steps, onConvert, isDisabled }: ConvertButtonProps) => {
   const [scaleAnim] = useState(new Animated.Value(1));
-  const conversionRate = 0.1; // 1 step = 0.1 currency
+  const conversionRate = 1 / 100; // 100 steps = 1 currency
   const convertedAmount = Math.floor(steps * conversionRate);
 
   const handlePress = () => {
@@ -54,17 +54,9 @@ export const ConvertButton = ({ steps, onConvert, isDisabled }: ConvertButtonPro
           isDisabledState && styles.buttonDisabled,
         ]}
       >
-        <View style={styles.content}>
-          <Text style={[styles.label, isDisabledState && styles.labelDisabled]}>
-            Convert Steps
-          </Text>
-          <Text style={[styles.value, isDisabledState && styles.valueDisabled]}>
-            {convertedAmount} 🔥
-          </Text>
-          <Text style={[styles.description, isDisabledState && styles.descriptionDisabled]}>
-            Today&apos;s {steps} steps
-          </Text>
-        </View>
+        <Text style={[styles.label, isDisabledState && styles.labelDisabled]}>
+          {convertedAmount} 🔥
+        </Text>
       </Pressable>
     </Animated.View>
   );
@@ -73,51 +65,24 @@ export const ConvertButton = ({ steps, onConvert, isDisabled }: ConvertButtonPro
 const styles = StyleSheet.create({
   button: {
     backgroundColor: '#FFB400',
-    borderRadius: 16,
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    marginHorizontal: 16,
-    marginVertical: 12,
-    borderWidth: 2,
-    borderColor: '#FF9500',
-    shadowColor: '#FF8C00',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    borderRadius: 10,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   buttonPressed: {
     backgroundColor: '#FF9500',
-    borderColor: '#FF7C00',
   },
   buttonDisabled: {
     opacity: 0.5,
   },
-  content: {
-    alignItems: 'center',
-    gap: 6,
-  },
   label: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#fff',
-  },
-  labelDisabled: {
-    color: 'rgba(255, 255, 255, 0.6)',
-  },
-  value: {
-    fontSize: 24,
     fontWeight: '700',
     color: '#fff',
   },
-  valueDisabled: {
-    color: 'rgba(255, 255, 255, 0.6)',
-  },
-  description: {
-    fontSize: 11,
-    color: 'rgba(255, 255, 255, 0.9)',
-  },
-  descriptionDisabled: {
+  labelDisabled: {
     color: 'rgba(255, 255, 255, 0.6)',
   },
 });
