@@ -1,13 +1,14 @@
 import * as Haptics from 'expo-haptics';
 import React, { useState } from 'react';
-import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Image, ImageSourcePropType, Pressable, StyleSheet, Text, View } from 'react-native';
 
 interface PetProps {
   onTap?: () => void;
   mood?: 'happy' | 'neutral' | 'playful';
+  image?: ImageSourcePropType;
 }
 
-export const Pet = ({ onTap, mood = 'neutral' }: PetProps) => {
+export const Pet = ({ onTap, mood = 'neutral', image }: PetProps) => {
   const [scale] = useState(new Animated.Value(1));
   const [bounce] = useState(new Animated.Value(0));
 
@@ -74,8 +75,14 @@ export const Pet = ({ onTap, mood = 'neutral' }: PetProps) => {
             },
           ]}
         >
-          <Text style={styles.petEmoji}>🐾</Text>
-          <Text style={styles.petMood}>{moodEmoji[mood]}</Text>
+          {image ? (
+            <Image source={image} style={styles.petImage} />
+          ) : (
+            <>
+              <Text style={styles.petEmoji}>🐾</Text>
+              <Text style={styles.petMood}>{moodEmoji[mood]}</Text>
+            </>
+          )}
         </Animated.View>
       </Pressable>
       <Text style={styles.petLabel}>Tap to interact!</Text>
@@ -104,6 +111,11 @@ const styles = StyleSheet.create({
   petContent: {
     alignItems: 'center',
     gap: 4,
+  },
+  petImage: {
+    width: 120,
+    height: 120,
+    resizeMode: 'contain',
   },
   petEmoji: {
     fontSize: 64,

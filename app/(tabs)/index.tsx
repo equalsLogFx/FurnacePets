@@ -9,6 +9,8 @@ import { GameStats } from '@/components/game-stats';
 import { Pet } from '@/components/pet';
 import { usePedometer } from '@/hooks/use-pedometer';
 
+const dogImage = require('@/assets/images/Dog.png');
+
 export default function HomeScreen() {
   const { steps } = usePedometer();
   const [currency, setCurrency] = useState(0);
@@ -104,7 +106,7 @@ export default function HomeScreen() {
 
             {/* Pet display */}
             <View style={styles.petContainer}>
-              <Pet onTap={handlePetTap} mood={petMood} />
+              <Pet image={dogImage} onTap={handlePetTap} mood={petMood} />
             </View>
           </View>
 
